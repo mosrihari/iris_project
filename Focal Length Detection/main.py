@@ -1,25 +1,22 @@
 import cv2
-import eye_aspect_ratio
 import mediapipe as mp
-from playsound import playsound
+import distance_from_camera
+from document_access import word_access
 
 mp_drawing = mp.solutions.drawing_utils
 mp_face_mesh = mp.solutions.face_mesh
 # For webcam input:
 drawing_spec = mp_drawing.DrawingSpec(thickness=1, circle_radius=1)
 cap = cv2.VideoCapture(0)
-thresh = 0.20
-flag = 0
-frames = 20
-
 font = cv2.FONT_HERSHEY_SIMPLEX
-org1 = (50, 50)
-org2 = (75,75)
+org = (50, 50)
 fontScale = 1
 color1 = (255, 0, 0)
-color2 = (0,0, 255)
 thickness = 2
-
+known_width = 7.62 # width between eyes approx (in cm)
+known_distance = 24
+known_focal_length = 50
+thresh = 1350
 
 with mp_face_mesh.FaceMesh(
     min_detection_confidence=0.5,
@@ -38,30 +35,22 @@ with mp_face_mesh.FaceMesh(
     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
     if results.multi_face_landmarks:
       for face_landmarks in results.multi_face_landmarks:
-        left_eye_array = [[face_landmarks.landmark[161].x, face_landmarks.landmark[161].y],
-                          [face_landmarks.landmark[163].x, face_landmarks.landmark[163].y],
-                          [face_landmarks.landmark[157].x, face_landmarks.landmark[157].y],
-                          [face_landmarks.landmark[154].x, face_landmarks.landmark[154].y],
-                          [face_landmarks.landmark[33].x, face_landmarks.landmark[33].y],
-                          [face_landmarks.landmark[133].x, face_landmarks.landmark[133].y]]
-        right_eye_array = [[face_landmarks.landmark[384].x, face_landmarks.landmark[384].y],
-                          [face_landmarks.landmark[381].x, face_landmarks.landmark[381].y],
-                          [face_landmarks.landmark[388].x, face_landmarks.landmark[388].y],
-                          [face_landmarks.landmark[390].x, face_landmarks.landmark[390].y],
-                          [face_landmarks.landmark[362].x, face_landmarks.landmark[362].y],
+        eye_corners = [[face_landmarks.landmark[33].x, face_landmarks.landmark[33].y],
                           [face_landmarks.landmark[263].x, face_landmarks.landmark[263].y]]
-        left_ear = eye_aspect_ratio.ear(left_eye_array)
-        right_ear = eye_aspect_ratio.ear(right_eye_array)
-        ear = (left_ear + right_ear) / 2.0
-        cv2.putText(image, 'EAR:' + str(ear), org1, font, fontScale, color1, thickness, cv2.LINE_AA)
-        if(ear < thresh):
-            flag += 1
-            if(flag >= 20):
-                cv2.putText(image, 'ALERT DROWSY' , org2, font,fontScale, color2, thickness, cv2.LINE_AA)
-                playsound(r"assets/alert.wav")
-        else:
-            flag = 0
-    cv2.imshow('MediaPipe FaceMesh', image)
+        pixel = distance_from_camera.pixel_width(eye_corners, known_focal_length, known_width, known_distance)
+        #focal_length = distance_from_camera.focal_length(known_width, pixel)
+        distance_offset = distance_from_camera.calculate_distance(known_focal_length,
+                                                                  known_width,
+                                                                  pixel)
+        distance = distance_offset + known_distance
+        cv2.putText(image, 'distance:' + str(distance), org, font, fontScale, color1, thickness, cv2.LINE_AA)
+        word_object = word_access.run()
+        if(word_object != -1):
+            return_value = word_access.increase_font_size(word_object,distance,thresh)
+
+    cv2.imshow('Focal Length Detection', image)
+    if((return_value == -1) or (word_object == -1)):
+      break
     if cv2.waitKey(5) & 0xFF == 27:
       break
 cap.release()
