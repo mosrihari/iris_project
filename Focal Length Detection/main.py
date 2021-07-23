@@ -47,10 +47,11 @@ with mp_face_mesh.FaceMesh(
         word_object = word_access.run()
         if(word_object != -1):
             return_value = word_access.increase_font_size(word_object,distance,thresh)
-
+        else:
+            break
     cv2.imshow('Focal Length Detection', image)
-    if((return_value == -1) or (word_object == -1)):
-      break
+    # if((return_value == -1) or (word_object == -1)):
+    #   break
     if cv2.waitKey(5) & 0xFF == 27:
       break
 cap.release()
