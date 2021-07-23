@@ -43,7 +43,7 @@ with mp_face_mesh.FaceMesh(
                                                                   known_width,
                                                                   pixel)
         distance = distance_offset + known_distance
-        cv2.putText(image, 'distance:' + str(distance), org, font, fontScale, color1, thickness, cv2.LINE_AA)
+        #cv2.putText(image, 'distance:' + str(distance), org, font, fontScale, color1, thickness, cv2.LINE_AA)
         word_object = word_access.run()
         if(word_object != -1):
             return_value = word_access.increase_font_size(word_object,distance,thresh)
